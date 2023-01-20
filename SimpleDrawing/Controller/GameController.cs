@@ -1,4 +1,5 @@
 ﻿using log4net.Repository.Hierarchy;
+using SimpleDrawing.Service;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,11 +13,6 @@ using System.Threading.Tasks;
 
 namespace SimpleDrawing
 {
-    public enum CommandEnum
-    {
-        MSG, //Message
-        DRW, //DRAW
-    }
     public class Player
     {
         static int nextId = 0;
@@ -51,20 +47,32 @@ namespace SimpleDrawing
         private readonly Logger logger = new Logger();
         private const int port = 8080;
         private const string hostname = "127.0.0.1";
-        public TcpClient tcpClient;
         private static GameController instance = null;
-        private static readonly object padlock = new object();
-        private StreamWriter tcpWriter = null;
-        //public event EventHandler<(CommandEnum commandType, string message)> CommandReceived;
+        private static readonly object padlock = new();
+        private TcpService client;
+        public event EventHandler<CommandEventArgs> CommandReceived;
+        public Task game;
         private GameController() {
+            client = new(hostname, port);
+            client.MessageReceived += ReceiveCommand;
         }
 
-        public void SendCommand(object? sender, (CommandEnum commandType, string message) input)
+        private void ReceiveCommand(object? sender, string command)
         {
-            logger?.Info("Send message: " + input.message);
-            if (tcpWriter == null)
+            string _type = command.Substring(0, 3);
+            if (Enum.TryParse(_type, out CommandEnum commandType))
+            {
+                string _command = command.Substring(3);
+                logger.Debug($"Forwarded message; type: {_type}, msg: {_command}");
+                CommandReceived?.Invoke(this, new CommandEventArgs(commandType, _command));
+            }
+        }
+
+        public void SendCommand(object? sender, string message, CommandEnum commandType)
+        {
+            if (!client.Connected)
                 return;
-            tcpWriter.WriteLine($"{input.commandType}{input.message}");
+            client.SendCommand(message, commandType);
         }
 
         public static GameController Instance
@@ -78,27 +86,16 @@ namespace SimpleDrawing
                 }
             }
         }
-
-        GameState currentGameState = new GameState("Uhr", 60, GameStatusEnum.Drawing, new() { new Player(0, "Herbert"), new Player(1, "Kevin") }, new Player(1, "Kevin"), 1, 3);
-        public void JoinGame(string username, string sessionId = "")
+        public void StartGame(string username = "", string sessionId = "")
         {
+            game = Task.Run(client.Start);
+            //client.Connect();
+
+
             //(GameState session, Player player) = sm.JoinGame(username, sessionId);
             //currentGameState = session;
             //currentGameState.OwnPlayer = player;
             //sm.StartGame(); //MOCK
-        }
-        private void ConnectToServer()
-        {
-            logger.Info("Connecting to server");
-            tcpClient = new TcpClient(hostname, port);
-            tcpWriter = new StreamWriter(tcpClient.GetStream(), Encoding.UTF8)
-            {
-                AutoFlush = true
-            };
-        }
-        public void StartGame()
-        {
-            ConnectToServer();
         }
     }
 }

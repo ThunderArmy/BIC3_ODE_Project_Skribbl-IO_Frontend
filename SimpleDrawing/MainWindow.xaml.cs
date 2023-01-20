@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
@@ -32,10 +34,20 @@ namespace SimpleDrawing
         {
             logger.Info("Initializing Game Main Window");
             InitializeComponent();
+            ColorPicker.StandardColors.Remove(ColorPicker.StandardColors.First(c => c.Name == "Transparent"));
             gameController.StartGame();
             drawController.Canvas = Field;
             drawController.CanvasChanged += DrawController_CanvasChanged;
+            gameController.CommandReceived += drawController.receiveCommand;
+            gameController.CommandReceived += ReceiveNonDrawingCommand;
+            drawController.LineAdded += DrawController_LineAdded;
         }
+
+        private void DrawController_LineAdded(object? sender, (Line data, System.Windows.Media.Color c) line)
+        {
+            gameController.SendCommand(sender, $"{line.data.X1};{line.data.Y1};{line.data.X2};{line.data.Y2};{line.data.StrokeThickness};{line.c}", CommandEnum.DRW);
+        }
+
         private void DrawController_CanvasChanged(object? sender, Canvas e)
         {
             logger.Debug($"Set field to: {e.GetHashCode()}");
@@ -60,29 +72,29 @@ namespace SimpleDrawing
             drawController.MouseMoved(sender, e.GetPosition(Field));
         }
 
-        private void ColorClick(object sender, RoutedEventArgs e)
-        {
-            if (sender is RadioButton b)
-            {
-                if (sender != Red)
-                    Red.IsChecked = false;
-                if (sender != Blue)
-                    Blue.IsChecked = false;
-                if (sender != Green)
-                    Green.IsChecked = false;
-                if (sender != Yellow)
-                    Yellow.IsChecked = false;
-                var color = b.Content switch
-                {
-                    "Red" => Colors.Red,
-                    "Green" => Colors.Green,
-                    "Blue" => Colors.Blue,
-                    "Yellow" => Colors.Yellow,
-                    _ => Colors.Red,
-                };
-                drawController.SetColorChanged(sender, color);
-            }
-        }
+        //private void ColorClick(object sender, RoutedEventArgs e)
+        //{
+        //    if (sender is RadioButton b)
+        //    {
+        //        if (sender != Red)
+        //            Red.IsChecked = false;
+        //        if (sender != Blue)
+        //            Blue.IsChecked = false;
+        //        if (sender != Green)
+        //            Green.IsChecked = false;
+        //        if (sender != Yellow)
+        //            Yellow.IsChecked = false;
+        //        var color = b.Content switch
+        //        {
+        //            "Red" => Colors.Red,
+        //            "Green" => Colors.Green,
+        //            "Blue" => Colors.Blue,
+        //            "Yellow" => Colors.Yellow,
+        //            _ => Colors.Red,
+        //        };
+        //        drawController.SetColorChanged(sender, color);
+        //    }
+        //}
 
         private void Field_MouseLeave(object sender, MouseEventArgs e)
         {
@@ -125,12 +137,67 @@ namespace SimpleDrawing
         {
             if (message.Trim().Length == 0) return;
             logger.Debug("Send message: " + message);
-            gameController.SendCommand(sender, (CommandEnum.MSG, message));
+            AddChatMessage(message);
+            gameController.SendCommand(sender, message, CommandEnum.MSG);
         }
 
         private void Window_MouseWheel(object sender, MouseWheelEventArgs e)
         {
             drawController.ChangeSizeDelta(sender, e.Delta);
+        }
+
+        private void SaveButton_Click(object sender, RoutedEventArgs e)
+        {
+            string f = Directory.GetCurrentDirectory();
+            f = f.Substring(0, f.IndexOf("bin"));
+            //string s = DateTime.Now.ToString().Replace(':','_').Replace('.', '_').Replace(' ', '_');
+            string d = $"{DateTime.Now:dd-hh-mm-ss}";
+            string p = $"{f}{d}.png";
+            Rect rect = new Rect(Field.RenderSize);
+            RenderTargetBitmap rtb = new RenderTargetBitmap((int)rect.Right,
+              (int)rect.Bottom, 96d, 96d, PixelFormats.Default);
+            rtb.Render(Field);
+            //endcode as PNG
+            BitmapEncoder pngEncoder = new PngBitmapEncoder();
+            pngEncoder.Frames.Add(BitmapFrame.Create(rtb));
+
+            //save to memory stream
+            MemoryStream ms = new();
+
+            pngEncoder.Save(ms);
+            ms.Close();
+            File.WriteAllBytes(p, ms.ToArray());
+            logger.Info("Saved picture");
+            //((BitmapImage)Field.Image).Save(p);
+        }
+        private void ClearButton_Click(object sender, RoutedEventArgs e)
+        {
+            drawController.ClearCanvas();
+            gameController.SendCommand(sender, null, CommandEnum.CLR);
+        }
+        internal void ReceiveNonDrawingCommand(object? sender, CommandEventArgs e)
+        {
+            switch (e.CommandType)
+            {
+                case CommandEnum.MSG:
+                    {
+                        Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            AddChatMessage(e.Command);
+                        }));
+                    }
+                    break;
+            }
+        }
+        private void AddChatMessage(string message)
+        {
+            chatTextBlock.Text += message + Environment.NewLine;
+        }
+
+        private void ColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<System.Windows.Media.Color?> e)
+        {
+            logger.Trace($"Changed color to: {e.NewValue.Value}");
+            drawController.SetColorChanged(sender, e.NewValue.Value);
         }
     }
 }

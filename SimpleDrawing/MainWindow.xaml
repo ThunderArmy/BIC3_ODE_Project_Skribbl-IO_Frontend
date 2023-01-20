@@ -5,40 +5,41 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SimpleDrawing"
         mc:Ignorable="d"
-        Title="Skribbl for ODE" Height="450" Width="1000" MouseUp="Window_MouseUp" MouseWheel="Window_MouseWheel">
-    <Grid>
+        Title="Skribbl for ODE" MouseUp="Window_MouseUp" MouseWheel="Window_MouseWheel"
+        xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+        SizeToContent="WidthAndHeight">
+    <Grid Height="750" Width="1200">
         <Border
         BorderThickness="2"
         BorderBrush="Black"
         Background="LightGray"
         HorizontalAlignment="Left"
         VerticalAlignment="Top"
-        Width="734"
-        Height="309" Margin="50,60,0,0">
-            <Canvas x:Name="Field" MouseDown="CanvasDown" MouseUp="CanvasUp" MouseLeave="Field_MouseLeave" MouseEnter="Field_MouseEnter" Background="White" Opacity="1" MouseMove="Field_MouseMove" Margin="0,0,0,0" >
+        Margin="50,60,0,0">
+            <Canvas x:Name="Field" MouseDown="CanvasDown" MouseUp="CanvasUp" MouseLeave="Field_MouseLeave" MouseEnter="Field_MouseEnter" Background="White" Opacity="1" MouseMove="Field_MouseMove" Margin="0,0,0,0" Width="800" Height="500">
             </Canvas>
         </Border>
-        <Label x:Name="debugLabel" Content="DebugInfo" Canvas.Left="601" Canvas.Top="10" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="798,10,0,0"/>
-        <Grid Background="Transparent" Margin="50,377,514,12">
-            <RadioButton x:Name="Red" Content="Red" HorizontalAlignment="Left" Margin="50,0,0,0" VerticalAlignment="Center" Click="ColorClick" IsChecked="True"/>
-            <RadioButton x:Name="Green" Content="Green" HorizontalAlignment="Left" Margin="150,0,0,0" VerticalAlignment="Center" Click="ColorClick"/>
-            <RadioButton x:Name="Blue" Content="Blue" HorizontalAlignment="Left" Margin="250,0,0,0" VerticalAlignment="Center" Click="ColorClick"/>
-            <RadioButton x:Name="Yellow" Content="Yellow" HorizontalAlignment="Left" Margin="350,0,0,0" VerticalAlignment="Center" Click="ColorClick"/>
+        <Label x:Name="debugLabel" Content="DebugInfo" Canvas.Left="601" Canvas.Top="10" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="798,22,0,0"/>
+        <Grid Background="Transparent" Margin="50,570,770,155">
+            <xctk:ColorPicker x:Name="ColorPicker" SelectedColor="Red" ShowAvailableColors="False" SelectedColorChanged="ColorPicker_SelectedColorChanged" Margin="0,0,0,1" BorderBrush="Black" DropDownBorderBrush="Black" ShowRecentColors="True" UsingAlphaChannel="False"/>
         </Grid>
-        <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Height="344" Margin="798,60,0,0" VerticalAlignment="Top" Width="185">
+        <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Height="501" Margin="858,61,0,0" VerticalAlignment="Top" Width="270">
             <Grid>
-                <Border BorderBrush="Black" BorderThickness="1" Width="165" Margin="9,19,9,28">
-                    <TextBlock x:Name="textBlock" HorizontalAlignment="Center" Height="268" TextWrapping="Wrap" VerticalAlignment="Top" Width="165" FontFamily="Ink Free">
+                <Border BorderBrush="Black" BorderThickness="1" Margin="30,30,30,28">
+                    <TextBlock x:Name="chatTextBlock" HorizontalAlignment="Center" Height="440" TextWrapping="Wrap" VerticalAlignment="Center" Width="208" FontFamily="Ink Free" Padding="5,5,5,5" FontSize="22" LineHeight="24">
                     </TextBlock>
                 </Border>
-                <Border BorderBrush="Black" BorderThickness="1" Height="21" VerticalAlignment="Bottom" Margin="9,0,30,2">
+                <Border BorderBrush="Black" BorderThickness="1" Height="21" VerticalAlignment="Top" Margin="30,476,30,0">
                     <TextBox x:Name="ChatInput" KeyDown="ChatInput_KeyDown">
                     </TextBox>
                 </Border>
-                <Button Content="&#10148;" HorizontalAlignment="Left" Margin="157,319,0,0" VerticalAlignment="Top" Height="21" Width="20" FontSize="6" BorderBrush="Black" Click="Button_SendMessage"/>
-                <Label Content="Chat" HorizontalAlignment="Left" Margin="9,1,0,0" VerticalAlignment="Top" FontFamily="Ink Free" Padding="1,1,1,1" FontWeight="Bold"/>
+                <Button Content="&#10148;" HorizontalAlignment="Right" VerticalAlignment="Bottom" Height="21" Width="21" FontSize="6" BorderBrush="Black" Click="Button_SendMessage" Margin="0,0,4,2"/>
+                <Label Content="Chat" HorizontalAlignment="Left" Margin="9,1,0,0" VerticalAlignment="Top" FontFamily="Ink Free" Padding="1,1,1,1" FontWeight="Bold" FontSize="22"/>
             </Grid>
         </Border>
         <Label Content="Skribbl.io for ODE" HorizontalAlignment="Left" Margin="50,18,0,0" VerticalAlignment="Top" FontFamily="Ink Free" FontSize="20" FontWeight="Bold"/>
+        <Button BorderBrush="Black" Content="&#128247;" HorizontalAlignment="Left" VerticalAlignment="Top" Click="SaveButton_Click" FontSize="36" Width="70" Height="55" Margin="784,571,0,0"/>
+        <Label Content="F l u g z e u g" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,19,0,0" FontFamily="Arial" FontSize="17"/>
+        <Button BorderBrush="Black" Content="&#128465;" HorizontalAlignment="Left" VerticalAlignment="Top" Click="ClearButton_Click" FontSize="36" Width="70" Height="55" Margin="700,571,0,0"/>
     </Grid>
 </Window>

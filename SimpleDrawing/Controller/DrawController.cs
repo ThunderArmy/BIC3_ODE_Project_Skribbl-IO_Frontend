@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -9,6 +11,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace SimpleDrawing
 {
@@ -26,7 +29,7 @@ namespace SimpleDrawing
         Brush drawingBrush = new SolidColorBrush(Colors.Red);
         public Canvas Canvas { get; set; }
         public event EventHandler<Canvas> CanvasChanged;
-
+        public event EventHandler<(Line, Color)> LineAdded;
         Line MakeLine(Point a, Point b)
         {
             var line = new Line();
@@ -36,7 +39,7 @@ namespace SimpleDrawing
             line.X2 = b.X;
             line.Y2 = b.Y;
             line.StrokeThickness = strokeThickness;
-            line.Height = strokeThickness*1000;
+            //line.Height = strokeThickness * 1000;
             return line;
         }
         Ellipse MakeEllipse(Point a)
@@ -81,7 +84,7 @@ namespace SimpleDrawing
             {
                 return;
             }
-            if(mouseEllipse != null)
+            if (mouseEllipse != null)
                 Canvas.Children.Remove(mouseEllipse);
             var circle = MakeEllipse(mousePos.Value);
             mouseEllipse = circle;
@@ -103,6 +106,7 @@ namespace SimpleDrawing
             live.start = _start;
             Canvas.Children.Add(line);
             CanvasChanged?.Invoke(this, Canvas);
+            LineAdded?.Invoke(this, (line, ((SolidColorBrush) drawingBrush).Color));
         }
 
         //void FieldLeft()
@@ -160,16 +164,21 @@ namespace SimpleDrawing
 
         internal void SetColorChanged(object? sender, Color e)
         {
-            logger.Debug("Color changed");
-            drawingBrush = new SolidColorBrush(e);
+            ChangeColor(e);
         }
 
+        private void ChangeColor(Color e)
+        {
+            logger.Trace($"Color changed to {e}");
+            drawingBrush = new SolidColorBrush(e);
+        }
         internal void ChangeSizeDelta(object? sender, int e)
         {
             logger.Debug("Scroll Delta: " + e);
-            if(e > 0)
+            if (e > 0)
             {
-                if(strokeThickness + 1 <= DEFAULT_STROKE_THICKNESS * 5) {
+                if (strokeThickness + 1 <= DEFAULT_STROKE_THICKNESS * 5)
+                {
                     strokeThickness++;
                 }
             }
@@ -180,6 +189,37 @@ namespace SimpleDrawing
                     strokeThickness--;
                 }
             }
+        }
+        public void ClearCanvas() {
+            Canvas.Children.Clear();
+            CanvasChanged?.Invoke(this, Canvas);
+        }
+        internal void receiveCommand(object? sender, CommandEventArgs e)
+        {
+            logger.Debug($"Received command; type: {e.CommandType}, msg: {e.Command}");
+            if(e.CommandType == CommandEnum.CLR)
+            {
+                Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    ClearCanvas();
+                }));
+            }
+            if (e.CommandType != CommandEnum.DRW)
+                return;
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var coords = e.Command.Split(';');
+                var start = new Point(double.Parse(coords[0]), double.Parse(coords[1]));
+                var end = new Point(double.Parse(coords[2]), double.Parse(coords[3]));
+                var size = int.Parse(coords[4]);
+                var color = (Color)ColorConverter.ConvertFromString(coords[5]);
+                logger.Trace($"Changed color using command to {color}");
+                ChangeColor(color);
+                strokeThickness = size;
+                var line = MakeLine(start, end);
+                Canvas.Children.Add(line);
+                CanvasChanged?.Invoke(this, Canvas);
+            }));
         }
     }
 }
