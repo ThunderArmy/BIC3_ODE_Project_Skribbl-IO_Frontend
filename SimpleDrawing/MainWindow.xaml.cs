@@ -34,9 +34,19 @@ namespace SimpleDrawing
         {
             logger.Info("Initializing Game Main Window");
             InitializeComponent();
-            ColorPicker.StandardColors.Remove(ColorPicker.StandardColors.First(c => c.Name == "Transparent"));
+            PrepareComponents();
+            ConnectEventHandlers();
             gameController.StartGame();
+        }
+
+        private void PrepareComponents()
+        {
             drawController.Canvas = Field;
+            ColorPicker.StandardColors.Remove(ColorPicker.StandardColors.First(c => c.Name == "Transparent"));
+        }
+
+        private void ConnectEventHandlers()
+        {
             drawController.CanvasChanged += DrawController_CanvasChanged;
             gameController.CommandReceived += drawController.receiveCommand;
             gameController.CommandReceived += ReceiveNonDrawingCommand;
@@ -50,7 +60,7 @@ namespace SimpleDrawing
 
         private void DrawController_CanvasChanged(object? sender, Canvas e)
         {
-            logger.Debug($"Set field to: {e.GetHashCode()}");
+            logger.Trace($"Set field to: {e.GetHashCode()}");
             Field = e;
             debugLabel.Content = e.Children.Count;
         }
@@ -137,7 +147,7 @@ namespace SimpleDrawing
         {
             if (message.Trim().Length == 0) return;
             logger.Debug("Send message: " + message);
-            AddChatMessage(message);
+            AddChatMessage("Me: " + message);
             gameController.SendCommand(sender, message, CommandEnum.MSG);
         }
 
@@ -183,7 +193,7 @@ namespace SimpleDrawing
                     {
                         Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                         {
-                            AddChatMessage(e.Command);
+                            AddChatMessage("Other: " + e.Command);
                         }));
                     }
                     break;

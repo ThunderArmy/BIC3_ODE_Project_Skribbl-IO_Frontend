@@ -88,7 +88,12 @@ namespace SimpleDrawing
         }
         public void StartGame(string username = "", string sessionId = "")
         {
-            game = Task.Run(client.Start);
+            var thread = new Thread(() =>
+            {
+                client.Connect();
+            });
+            thread.Start();
+            //game = Task.Run(client.Start);
             //client.Connect();
 
 

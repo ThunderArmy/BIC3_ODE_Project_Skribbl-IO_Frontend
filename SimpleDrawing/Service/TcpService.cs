@@ -134,7 +134,7 @@ namespace SimpleDrawing.Service
                     MessageReceived?.Invoke(this, message);
                 } while (true);
             }
-            catch (IOException e)
+            catch (SystemException e)
             {
                 DebugMessageSent?.Invoke(this, "Server disconnected, while receiving message!");
                 logger.Error("Server disconnected, while receiving message!");
@@ -178,7 +178,7 @@ namespace SimpleDrawing.Service
                     logger.Info("Server connection established.");
                     break;
                 }
-                catch (IOException e)
+                catch (SocketException e)
                 {
                     logger.Error("Connection retry failed.");
                     if (tryNum >= 4)
@@ -219,9 +219,12 @@ namespace SimpleDrawing.Service
                 {
                     output.Close();
                 }
-                Client.Close();
+                if(Client != null)
+                {
+                    Client.Close();
+                }
             }
-            catch (IOException e)
+            catch (SocketException e)
             {
                 logger.Error($"Error received when trying to disconnect: {e}");
             }
