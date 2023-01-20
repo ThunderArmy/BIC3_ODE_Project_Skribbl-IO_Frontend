@@ -65,7 +65,7 @@ namespace SimpleDrawing
 
         public void SendCommand(object? sender, (CommandEnum commandType, string message) input)
         {
-            logger?.Info("Send message: " + input.message);
+            logger.Info("Send message: " + input.message);
             if (tcpWriter == null)
                 return;
             tcpWriter.WriteLine($"{input.commandType}{input.message}");
