@@ -35,7 +35,15 @@ namespace SimpleDrawing
             gameController.StartGame();
             drawController.Canvas = Field;
             drawController.CanvasChanged += DrawController_CanvasChanged;
+            gameController.commandReceived += drawController.receiveCommand;
+            drawController.LineAdded += DrawController_LineAdded;
         }
+
+        private void DrawController_LineAdded(object? sender, Line e)
+        {
+            gameController.SendCommand(sender, (CommandEnum.DRW, $"{e.X1};{e.Y1};{e.X2};{e.Y2}"));
+        }
+
         private void DrawController_CanvasChanged(object? sender, Canvas e)
         {
             logger.Debug($"Set field to: {e.GetHashCode()}");
@@ -131,6 +139,31 @@ namespace SimpleDrawing
         private void Window_MouseWheel(object sender, MouseWheelEventArgs e)
         {
             drawController.ChangeSizeDelta(sender, e.Delta);
+        }
+
+        private void SaveButton_Click(object sender, RoutedEventArgs e)
+        {
+            string f = Directory.GetCurrentDirectory();
+            f = f.Substring(0, f.IndexOf("bin"));
+            //string s = DateTime.Now.ToString().Replace(':','_').Replace('.', '_').Replace(' ', '_');
+            string d = $"{DateTime.Now:dd-hh-mm-ss}";
+            string p = $"{f}{d}.png";
+            Rect rect = new Rect(Field.RenderSize);
+            RenderTargetBitmap rtb = new RenderTargetBitmap((int)rect.Right,
+              (int)rect.Bottom, 96d, 96d, System.Windows.Media.PixelFormats.Default);
+            rtb.Render(Field);
+            //endcode as PNG
+            BitmapEncoder pngEncoder = new PngBitmapEncoder();
+            pngEncoder.Frames.Add(BitmapFrame.Create(rtb));
+
+            //save to memory stream
+            MemoryStream ms = new System.IO.MemoryStream();
+
+            pngEncoder.Save(ms);
+            ms.Close();
+            File.WriteAllBytes(p, ms.ToArray());
+            logger.Info("Saved picture");
+            //((BitmapImage)Field.Image).Save(p);
         }
     }
 }

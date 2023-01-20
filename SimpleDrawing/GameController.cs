@@ -55,6 +55,10 @@ namespace SimpleDrawing
         private static GameController instance = null;
         private static readonly object padlock = new object();
         private StreamWriter tcpWriter = null;
+        private StreamReader tcpReader = null;
+        private Task recieveTask;
+        public event EventHandler<CommandEventArgs> commandReceived;
+
         //public event EventHandler<(CommandEnum commandType, string message)> CommandReceived;
         private GameController() {
         }
@@ -95,6 +99,41 @@ namespace SimpleDrawing
             {
                 AutoFlush = true
             };
+            recieveTask = Task.Run(async () =>
+            {
+                //tcpReader = new StreamReader(tcpClient.GetStream(), Encoding.UTF8);
+                //do
+                //{
+                //    //tcpReader.ReadLineAsync().ContinueWith(t =>
+                //    //{
+                //    //    Debug.WriteLine($"Received Message async: {t.Result}");
+                //    //});
+                //    logger.Debug("Started tcp reader");
+                //    var message = await tcpReader.ReadLine();
+                //} while (true);
+                using (tcpReader = new StreamReader(tcpClient.GetStream(), Encoding.UTF8))
+                {
+                    string line;
+                    while ((line = tcpReader.ReadLine()) != null)
+                    {
+                        Debug.WriteLine($"Received Message async: {line}");
+                        ParseCommand(line);
+                        // do something with line
+                    }
+                }
+            });
+
+            //tcpReader.ReadLineAsync().ContinueWith(recieveMessage);
+        }
+        private void ParseCommand(string command)
+        {
+            string _type = command.Substring(0, 3);
+            if(Enum.TryParse(_type, out CommandEnum commandType))
+            {
+                string _command = command.Substring(3);
+                logger.Debug($"Forwarded message; type: {_type}, msg: {_command}");
+                commandReceived?.Invoke(this, new CommandEventArgs(commandType, _command));
+            }
         }
         public void StartGame()
         {

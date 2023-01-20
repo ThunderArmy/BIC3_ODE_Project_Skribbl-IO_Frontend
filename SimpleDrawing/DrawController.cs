@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -9,6 +11,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace SimpleDrawing
 {
@@ -26,7 +29,7 @@ namespace SimpleDrawing
         Brush drawingBrush = new SolidColorBrush(Colors.Red);
         public Canvas Canvas { get; set; }
         public event EventHandler<Canvas> CanvasChanged;
-
+        public event EventHandler<Line> LineAdded;
         Line MakeLine(Point a, Point b)
         {
             var line = new Line();
@@ -103,6 +106,7 @@ namespace SimpleDrawing
             live.start = _start;
             Canvas.Children.Add(line);
             CanvasChanged?.Invoke(this, Canvas);
+            LineAdded?.Invoke(this, line);
         }
 
         //void FieldLeft()
@@ -180,6 +184,22 @@ namespace SimpleDrawing
                     strokeThickness--;
                 }
             }
+        }
+
+        internal void receiveCommand(object? sender, CommandEventArgs e)
+        {
+            logger.Debug($"Received message; type: {e.CommandType}, msg: {e.Message}");
+            if (e.CommandType != CommandEnum.DRW)
+                return;
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var coords = e.Message.Split(';');
+                var start = new Point(double.Parse(coords[0]), double.Parse(coords[1]));
+                var end = new Point(double.Parse(coords[2]), double.Parse(coords[3]));
+                var line = MakeLine(start, end);
+                Canvas.Children.Add(line);
+                CanvasChanged?.Invoke(this, Canvas);
+            }));
         }
     }
 }

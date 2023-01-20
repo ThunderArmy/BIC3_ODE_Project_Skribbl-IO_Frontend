@@ -40,5 +40,6 @@
             </Grid>
         </Border>
         <Label Content="Skribbl.io for ODE" HorizontalAlignment="Left" Margin="50,18,0,0" VerticalAlignment="Top" FontFamily="Ink Free" FontSize="20" FontWeight="Bold"/>
+        <Button BorderBrush="Black" Content="&#128247;" HorizontalAlignment="Left" VerticalAlignment="Top" Click="SaveButton_Click" FontSize="20" Width="38" Height="30" Margin="746,374,0,0"/>
     </Grid>
 </Window>
