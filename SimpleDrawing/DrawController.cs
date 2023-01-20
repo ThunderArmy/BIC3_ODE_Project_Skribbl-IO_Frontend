@@ -190,10 +190,20 @@ namespace SimpleDrawing
                 }
             }
         }
-
+        public void ClearCanvas() {
+            Canvas.Children.Clear();
+            CanvasChanged?.Invoke(this, Canvas);
+        }
         internal void receiveCommand(object? sender, CommandEventArgs e)
         {
             logger.Debug($"Received command; type: {e.CommandType}, msg: {e.Command}");
+            if(e.CommandType == CommandEnum.CLR)
+            {
+                Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    ClearCanvas();
+                }));
+            }
             if (e.CommandType != CommandEnum.DRW)
                 return;
             Application.Current.Dispatcher.BeginInvoke(new Action(() =>

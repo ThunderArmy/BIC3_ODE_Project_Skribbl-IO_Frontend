@@ -15,7 +15,8 @@ namespace SimpleDrawing
     public enum CommandEnum
     {
         MSG, //Message
-        DRW, //DRAW
+        DRW, //Draw
+        CLR //Clear
     }
     public class Player
     {

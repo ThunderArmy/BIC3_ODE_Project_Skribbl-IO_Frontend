@@ -170,6 +170,11 @@ namespace SimpleDrawing
             logger.Info("Saved picture");
             //((BitmapImage)Field.Image).Save(p);
         }
+        private void ClearButton_Click(object sender, RoutedEventArgs e)
+        {
+            drawController.ClearCanvas();
+            gameController.SendCommand(sender, (CommandEnum.CLR, null));
+        }
         internal void receiveNonDrawingComand(object? sender, CommandEventArgs e)
         {
             switch (e.CommandType)
