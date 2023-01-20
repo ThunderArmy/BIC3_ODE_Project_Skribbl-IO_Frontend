@@ -38,14 +38,14 @@ namespace SimpleDrawing
             gameController.StartGame();
             drawController.Canvas = Field;
             drawController.CanvasChanged += DrawController_CanvasChanged;
-            gameController.commandReceived += drawController.receiveCommand;
-            gameController.commandReceived += receiveNonDrawingComand;
+            gameController.CommandReceived += drawController.receiveCommand;
+            gameController.CommandReceived += ReceiveNonDrawingCommand;
             drawController.LineAdded += DrawController_LineAdded;
         }
 
         private void DrawController_LineAdded(object? sender, (Line data, System.Windows.Media.Color c) line)
         {
-            gameController.SendCommand(sender, (CommandEnum.DRW, $"{line.data.X1};{line.data.Y1};{line.data.X2};{line.data.Y2};{line.data.StrokeThickness};{line.c}"));
+            gameController.SendCommand(sender, $"{line.data.X1};{line.data.Y1};{line.data.X2};{line.data.Y2};{line.data.StrokeThickness};{line.c}", CommandEnum.DRW);
         }
 
         private void DrawController_CanvasChanged(object? sender, Canvas e)
@@ -138,7 +138,7 @@ namespace SimpleDrawing
             if (message.Trim().Length == 0) return;
             logger.Debug("Send message: " + message);
             AddChatMessage(message);
-            gameController.SendCommand(sender, (CommandEnum.MSG, message));
+            gameController.SendCommand(sender, message, CommandEnum.MSG);
         }
 
         private void Window_MouseWheel(object sender, MouseWheelEventArgs e)
@@ -173,9 +173,9 @@ namespace SimpleDrawing
         private void ClearButton_Click(object sender, RoutedEventArgs e)
         {
             drawController.ClearCanvas();
-            gameController.SendCommand(sender, (CommandEnum.CLR, null));
+            gameController.SendCommand(sender, null, CommandEnum.CLR);
         }
-        internal void receiveNonDrawingComand(object? sender, CommandEventArgs e)
+        internal void ReceiveNonDrawingCommand(object? sender, CommandEventArgs e)
         {
             switch (e.CommandType)
             {
