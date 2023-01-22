@@ -20,6 +20,7 @@ namespace SimpleDrawing
         private readonly Logger logger = new Logger();
         public const int DISTANCE_DRAWING_CHECK = 2;
         public const int DEFAULT_STROKE_THICKNESS = 5;
+        public const int MAX_STROKE_THICKNESS = 91;
         private int strokeThickness = DEFAULT_STROKE_THICKNESS;
         private bool isMouseDown = false;
         private bool hasLeft = false;
@@ -177,7 +178,7 @@ namespace SimpleDrawing
             logger.Debug("Scroll Delta: " + e);
             if (e > 0)
             {
-                if (strokeThickness + 1 <= DEFAULT_STROKE_THICKNESS * 5)
+                if (strokeThickness + 1 <= MAX_STROKE_THICKNESS)
                 {
                     strokeThickness++;
                 }

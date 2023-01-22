@@ -92,6 +92,7 @@ namespace SimpleDrawing
             {
                 client.Connect();
             });
+            thread.IsBackground = true;
             thread.Start();
             //game = Task.Run(client.Start);
             //client.Connect();
