@@ -2,7 +2,7 @@
 {
     public enum TcpStateEnum
     {
-        DISCONNETED,
+        DISCONNECTED,
         STARTING,
         CONNECTED,
         RETRYING,

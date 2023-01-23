@@ -20,6 +20,7 @@ namespace SimpleDrawing
         private readonly Logger logger = new Logger();
         public const int DISTANCE_DRAWING_CHECK = 2;
         public const int DEFAULT_STROKE_THICKNESS = 5;
+        public const int MAX_STROKE_THICKNESS = 91;
         private int strokeThickness = DEFAULT_STROKE_THICKNESS;
         private bool isMouseDown = false;
         private bool hasLeft = false;
@@ -177,7 +178,7 @@ namespace SimpleDrawing
             logger.Debug("Scroll Delta: " + e);
             if (e > 0)
             {
-                if (strokeThickness + 1 <= DEFAULT_STROKE_THICKNESS * 5)
+                if (strokeThickness + 1 <= MAX_STROKE_THICKNESS)
                 {
                     strokeThickness++;
                 }
@@ -197,14 +198,14 @@ namespace SimpleDrawing
         internal void receiveCommand(object? sender, CommandEventArgs e)
         {
             logger.Debug($"Received command; type: {e.CommandType}, msg: {e.Command}");
-            if(e.CommandType == CommandEnum.CLR)
+            if(e.CommandType == CommandEnum.CLEAR)
             {
                 Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                 {
                     ClearCanvas();
                 }));
             }
-            if (e.CommandType != CommandEnum.DRW)
+            if (e.CommandType != CommandEnum.DRAWING)
                 return;
             Application.Current.Dispatcher.BeginInvoke(new Action(() =>
             {

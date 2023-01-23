@@ -1,4 +1,6 @@
-﻿using log4net.Repository.Hierarchy;
+﻿using EnumStringValues;
+using log4net.Repository.Hierarchy;
+using SimpleDrawing.Enums;
 using SimpleDrawing.Service;
 using System;
 using System.Collections.Generic;
@@ -10,6 +12,7 @@ using System.Security.Policy;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Interop;
 
 namespace SimpleDrawing
 {
@@ -50,29 +53,216 @@ namespace SimpleDrawing
         private static GameController instance = null;
         private static readonly object padlock = new();
         private TcpService client;
+        private GameStateEnum gameState = GameStateEnum.INITIAL;
+        private PlayerStateEnum playerState = PlayerStateEnum.NONE;
+
         public event EventHandler<CommandEventArgs> CommandReceived;
+        public event EventHandler<GameStateEnum> GameStateChanged;
+        public event EventHandler<PlayerStateEnum> PlayerStateChanged;
+        public event EventHandler ResetMode;
+        public event EventHandler<string> SendClientInfoMessage;
+
+
+        private List<string> words;
         public Task game;
-        private GameController() {
+        private string chosenWord;
+        private bool resetOccured = false;
+
+        public bool IsDrawer { get => playerState == PlayerStateEnum.DRAWER; }
+        public bool IsGuesser { get => playerState == PlayerStateEnum.GUESSER; }
+        public bool IsInitial { get => gameState == GameStateEnum.INITIAL; }
+        public bool IsStarting { get => gameState == GameStateEnum.STARTING; }
+        public bool IsFinished { get => gameState == GameStateEnum.FINISHED; }
+        private GameController()
+        {
             client = new(hostname, port);
             client.MessageReceived += ReceiveCommand;
         }
 
         private void ReceiveCommand(object? sender, string command)
         {
+            //Handle Commands; Commands always have a length of 3
+            resetOccured = false;
             string _type = command.Substring(0, 3);
-            if (Enum.TryParse(_type, out CommandEnum commandType))
+            logger.Debug($"Parsing Command: {_type}");
+            if (EnumExtensions.TryParseStringValueToEnum<CommandEnum>(_type, out CommandEnum commandType))
             {
-                string _command = command.Substring(3);
-                logger.Debug($"Forwarded message; type: {_type}, msg: {_command}");
-                CommandReceived?.Invoke(this, new CommandEventArgs(commandType, _command));
+                string _body = command.Substring(3);
+                logger.Debug($"Forwarding message; type: {commandType}, msg: {_body}");
+                switch (commandType)
+                {
+                    case CommandEnum.MESSAGE:
+                    case CommandEnum.DRAWING:
+                    case CommandEnum.CLEAR:
+                        CommandReceived?.Invoke(this, new CommandEventArgs(commandType, _body));
+                        break;
+                    //First state => If nothing has started yet, here checks for incorrect states are being proceeded
+                    case CommandEnum.START_GAME_REQUEST:
+                        {
+                            logger.Info("Start request for the game ...");
+                            if (gameState != GameStateEnum.INITIAL)
+                            {
+                                logger.Info("Client is in another game state other than initial!");
+                                logger.Info("Send start request not acknowledged.");
+                                client.SendCommand(CommandEnum.START_GAME_NOTACKNOWLEDGEMENT);
+                                return;
+                            }
+                            logger.Info("Send start request acknowledged.");
+                            client.SendCommand(CommandEnum.START_GAME_ACKNOWLEDGEMENT);
+
+                            gameState = GameStateEnum.STARTING;
+                            GameStateChanged?.Invoke(this, gameState);
+                            break;
+                        }
+                    // All clients have acknowledged, hence the server determined who the drawers and guessers are
+                    // Guesser simply wait for the start of round or an abort
+                    case CommandEnum.GUESSER_REQUEST:
+                        {
+                            logger.Info("Trying to set client to guesser mode");
+                            logger.Debug("Game state: " + gameState + " Player state: " + playerState);
+
+                            if (gameState != GameStateEnum.STARTING || playerState != PlayerStateEnum.NONE)
+                            {
+                                logger.Info("Client is in another game or player state!");
+                                return;
+                            }
+
+                            playerState = PlayerStateEnum.GUESSER;
+                            logger.Info("Set client to guesser mode");
+                            PlayerStateChanged?.Invoke(this, playerState);
+                            CommandReceived?.Invoke(this, new CommandEventArgs(commandType, "You are a guesser. Try to guess the drawn word."));
+                            //TODO: Talk to erik about the following code
+                            //gameObserver.setGuesserMode();
+                            break;
+                        }
+                    // Drawer gets send a list of 3 words
+                    // He then has to choose one of them
+                    case CommandEnum.DRAWER_REQUEST:
+                        {
+                            logger.Info("Trying to set client to drawer mode");
+                            logger.Debug($"Game state: {gameState} Player state: {playerState}");
+
+                            if (gameState != GameStateEnum.STARTING || playerState != PlayerStateEnum.NONE)
+                            {
+                                logger.Info("Client is in another game or player state!");
+                                return;
+                            }
+
+                            logger.Debug($"Received words: {_body}");
+                            string[] split = _body.Substring(3).Split(";");
+                            words = split.ToList();
+
+                            playerState = PlayerStateEnum.DRAWER;
+                            PlayerStateChanged?.Invoke(this, playerState);
+
+                            SendClientInfoMessage?.Invoke(this, $"You are the drawer choose a word: {_body}");
+                            CommandReceived?.Invoke(this, new CommandEventArgs(commandType, _body)); //Set words and receive on guesser mode
+                            //TODO: Potentially add another eventhandler for admin commands; gameObserver.setChoosableWords(words.get(0), words.get(1), words.get(2));
+
+                            logger.Info("Set client to guesser mode for word choosing");
+                            break;
+                        }
+                    // As the drawer selected a word, the server requests the start of the round
+                    case CommandEnum.ROUND_START_REQUEST:
+                        {
+                            logger.Info("Request to start the round ");
+                            logger.Debug("Game state: " + gameState + " Player state: " + playerState);
+                            if (!IsStarting || !(IsDrawer || IsGuesser))
+                            {
+                                logger.Info("Client is in another game or player state!");
+                                client.SendCommand(CommandEnum.ROUND_START_NOTACKNOWLEDGEMENT);
+                                return;
+                            }
+                            logger.Info("All seems ready to rumble!");
+                            gameState = GameStateEnum.STARTED;
+                            GameStateChanged?.Invoke(this, gameState);
+                            client.SendCommand(CommandEnum.ROUND_START_ACKNOWLEDGEMENT);
+                            break;
+                        }
+                    // Alle haben den Rundenstart Acknowledged, somit erhalten sie das "Wort"
+                    // Guesser erhalten Unterstriche("_") als Wort, während der Drawer das eigentliche
+                    // Wort erhält
+                    case CommandEnum.ROUND_STARTED:
+                        {
+                            logger.Info("Round start was sent.");
+                            logger.Debug("Game state: " + gameState + " Player state: " + playerState);
+
+                            if (gameState != GameStateEnum.STARTED)
+                            {
+                                logger.Error("Client is in another game!");
+                                return;
+                            }
+
+                            if (IsDrawer)
+                            {
+                                //gameObserver.setDrawerMode(); TODO: Set drawer mode
+                            }
+
+                            chosenWord = _body;
+                            CommandReceived?.Invoke(this, new CommandEventArgs(commandType, chosenWord));
+                            //gameObserver.setDisplayWord(chosenWord);
+                            break;
+                        }
+
+                    case CommandEnum.CLOSE_GUESS:
+                        {
+                            SendClientInfoMessage?.Invoke(this, $"{_body} is close!");
+                            //TODO: Set output words gameObserver.outputWords(message.substring(3) + " is close!");
+                            break;
+                        }
+
+                    case CommandEnum.CORRECT_GUESS:
+                        {
+                            logger.Info("Word was guessed correctly.");
+                            logger.Debug("Game state: " + gameState + " Player state: " + playerState);
+
+                            gameState = GameStateEnum.FINISHED;
+                            GameStateChanged?.Invoke(this, gameState);
+
+                            //TODO: Set Win Mode gameObserver.setWinMode();
+                            break;
+                        }
+
+                    case CommandEnum.ROUND_END_SUCCESS:
+                        {
+                            if ((IsGuesser && IsFinished) || IsDrawer)
+                            {
+
+                                playerState = PlayerStateEnum.NONE;
+                                PlayerStateChanged?.Invoke(this, playerState);
+
+                                gameState = GameStateEnum.INITIAL;
+                                GameStateChanged?.Invoke(this, gameState);
+
+                                CommandReceived?.Invoke(this, new CommandEventArgs(CommandEnum.CLEAR, ""));
+                                //gameObserver.clearCanvas();
+                                //gameObserver.clearText();
+                                client.SendCommand(CommandEnum.ROUND_END_ACKNOWLEDGEMENT);
+                            }
+                            break;
+                        }
+                    case CommandEnum.ERROR:
+                        {
+                            logger.Error("An error has occurred.");
+                            logger.Debug("Game state: " + gameState + " Player state: " + playerState);
+                            Reset();
+                            break;
+                        }
+
+                }
+            }
+            else
+            {
+                logger.Debug("$Parsing of command failed!");
             }
         }
 
         public void SendCommand(object? sender, string message, CommandEnum commandType)
         {
+            logger.Debug($"{commandType}: {message}");
             if (!client.Connected)
                 return;
-            client.SendCommand(message, commandType);
+            client.SendCommand(commandType, message);
         }
 
         public static GameController Instance
@@ -86,9 +276,15 @@ namespace SimpleDrawing
                 }
             }
         }
-        public void StartGame(string username = "", string sessionId = "")
+        public void JoinGame(string username = "", string sessionId = "")
         {
-            game = Task.Run(client.Start);
+            var thread = new Thread(() =>
+            {
+                client.Connect();
+            });
+            thread.IsBackground = true;
+            thread.Start();
+            //game = Task.Run(client.Start);
             //client.Connect();
 
 
@@ -96,6 +292,48 @@ namespace SimpleDrawing
             //currentGameState = session;
             //currentGameState.OwnPlayer = player;
             //sm.StartGame(); //MOCK
+        }
+        public void StartGame()
+        {
+            if (client.Connected)
+            {
+                logger.Info("Trying to start a game. Sending a start game request.");
+                client.SendCommand(CommandEnum.START_GAME_REQUEST);
+            }
+        }
+        public void DrawerAcknowledge(string word)
+        {
+            if (!client.Connected || IsDrawer || IsStarting)
+            {
+                logger.Info($"Current status isConnected: {client.Connected} isDrawer: {IsDrawer} isStarting: {IsStarting}");
+                return;
+            }
+            logger.Info("Drawer chose word and send acknowledgement.");
+            client.SendCommand(CommandEnum.DRAWER_ACKNOWLEDGEMENT, word);
+        }
+        public void Reset()
+        {
+            logger.Error("Resetting to initial mode.");
+            gameState = GameStateEnum.INITIAL;
+            GameStateChanged?.Invoke(this, gameState);
+            playerState = PlayerStateEnum.NONE;
+            PlayerStateChanged?.Invoke(this, playerState);
+            if(words != null)
+                words.Clear();
+            chosenWord = "";
+            ResetMode?.Invoke(this, EventArgs.Empty);
+        }
+        //TODO: Connect event handlers
+        public void OnDebugMessageSent(object sender, string message)
+        {
+            // Debug Messages only get sent when something causes TCP server problems
+            // Therefor we preemptively reset the Game Service and 
+            //TODO: Output using message command; gameObserver.outputWords(message);
+            if (!resetOccured)
+            {
+                resetOccured = true;
+                Reset();
+            }
         }
     }
 }
