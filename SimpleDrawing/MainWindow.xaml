@@ -42,5 +42,13 @@
         <!--<Label Content="F l u g z _ _ g" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,13,0,0" FontFamily="Arial" FontSize="18"/>-->
         <Button BorderBrush="Black" Content="&#128465;" HorizontalAlignment="Left" VerticalAlignment="Top" Click="ClearButton_Click" FontSize="36" Width="70" Height="55" Margin="700,571,0,0"/>
         <TextBlock x:Name="GuessWordText" HorizontalAlignment="Center" TextWrapping="Wrap" Text="F l u g z _ _ g" VerticalAlignment="Top" Margin="0,27,0,0" FontSize="18" FontFamily="Arial"/>
+        <Label x:Name="PlayerState" Content="PlayerState: " HorizontalAlignment="Left" Margin="916,623,0,0" VerticalAlignment="Top" Width="79"/>
+        <Label x:Name="GameState" Content="GameState: " HorizontalAlignment="Left" Margin="916,592,0,0" VerticalAlignment="Top" Width="77"/>
+        <Label x:Name="ConnectionState" Content="ConnectionState: " HorizontalAlignment="Left" Margin="916,654,0,0" VerticalAlignment="Top"/>
+        <Label x:Name="GameStateValue" Content="GameStateValue" HorizontalAlignment="Left" Margin="1031,595,0,0" VerticalAlignment="Top"/>
+        <Label x:Name="PlayerStateValue" Content="PlayerState" HorizontalAlignment="Left" Margin="1031,623,0,0" VerticalAlignment="Top" Width="79"/>
+        <Label x:Name="ConnectionStateValue" Content="ConnectionState" HorizontalAlignment="Left" Margin="1031,654,0,0" VerticalAlignment="Top"/>
+        <Button x:Name="StartGame" Content="Start Game
+" HorizontalAlignment="Left" Margin="993,685,0,0" VerticalAlignment="Top" Height="34" Width="67" Click="StartGame_Click"/>
     </Grid>
 </Window>

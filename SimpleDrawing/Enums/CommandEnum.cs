@@ -13,6 +13,10 @@ namespace SimpleDrawing
         CLEAR,
 
         // Game Service Commands
+        [StringValue("ADR")]
+        ADD_USER_REQUEST,
+        [StringValue("IGR")]
+        INTIAL_GAME_REQUEST,
         [StringValue("SGR")]
         START_GAME_REQUEST,
         [StringValue("SGA")]

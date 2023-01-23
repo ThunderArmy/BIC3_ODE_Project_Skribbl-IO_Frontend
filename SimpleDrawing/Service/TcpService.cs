@@ -60,7 +60,6 @@ namespace SimpleDrawing.Service
             else
             {
                 logger.Debug("Command:  " + commandEnum + " with message: " + message + " sent. ");
-
             }
         }
         public Task Start()

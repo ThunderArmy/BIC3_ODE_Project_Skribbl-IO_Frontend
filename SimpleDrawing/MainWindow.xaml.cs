@@ -54,6 +54,33 @@ namespace SimpleDrawing
             gameController.CommandReceived += drawController.receiveCommand;
             gameController.CommandReceived += ReceiveNonDrawingCommand;
             drawController.LineAdded += DrawController_LineAdded;
+            gameController.SendClientInfoMessage += GameController_SendClientInfoMessage;
+            gameController.PlayerStateChanged += GameController_PlayerStateChanged;
+            gameController.GameStateChanged += GameController_GameStateChanged;
+        }
+
+        private void GameController_GameStateChanged(object? sender, Enums.GameStateEnum e)
+        {
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                GameStateValue.Content = e;
+            }));
+        }
+
+        private void GameController_PlayerStateChanged(object? sender, Enums.PlayerStateEnum e)
+        {
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                PlayerStateValue.Content = e;
+            }));
+        }
+
+        private void GameController_SendClientInfoMessage(object? sender, string e)
+        {
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                AddChatMessage($"Server: {e}");
+            }));
         }
 
         private void DrawController_LineAdded(object? sender, (Line data, System.Windows.Media.Color c) line)
@@ -122,6 +149,14 @@ namespace SimpleDrawing
 
         private void SendMessage(object sender, string message)
         {
+            if(message.StartsWith("--"))
+            {
+                if (message.Contains("choose,"))
+                {
+                    gameController.SendCommand(this, message.Split(',')[1], CommandEnum.DRAWER_ACKNOWLEDGEMENT);
+                }
+                return;
+            }
             if (message.Trim().Length == 0) return;
             logger.Debug("Send message: " + message);
             AddChatMessage("Me: " + message);
@@ -176,6 +211,14 @@ namespace SimpleDrawing
                         }));
                     }
                     break;
+                case CommandEnum.ROUND_STARTED:
+                    {
+                        Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            SetGuessingWord(e.Command);
+                        }));
+                        break;
+                    }
             }
         }
 
@@ -187,11 +230,11 @@ namespace SimpleDrawing
         private void SetGuessingWord(string word)
         {
             //TODO: Word replacements are for testing only!
-            var _tmp = word;
-            word = new string('_', word.Length);
+            //var _tmp = word;
+            //word = new string('_', word.Length);
 
             word = string.Join(' ', word.ToCharArray());
-            word += $" ({_tmp})";
+            //word += $" ({_tmp})";
             GuessWordText.Text = word;
         }
 
@@ -199,6 +242,11 @@ namespace SimpleDrawing
         {
             logger.Trace($"Changed color to: {e.NewValue.Value}");
             drawController.SetColorChanged(sender, e.NewValue.Value);
+        }
+
+        private void StartGame_Click(object sender, RoutedEventArgs e)
+        {
+            gameController.SendCommand(this, "", CommandEnum.INTIAL_GAME_REQUEST);
         }
     }
 }

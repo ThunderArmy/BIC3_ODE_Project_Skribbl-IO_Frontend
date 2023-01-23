@@ -60,7 +60,7 @@ namespace SimpleDrawing
         public event EventHandler<GameStateEnum> GameStateChanged;
         public event EventHandler<PlayerStateEnum> PlayerStateChanged;
         public event EventHandler ResetMode;
-
+        public event EventHandler<string> SendClientInfoMessage;
 
 
         private List<string> words;
@@ -155,12 +155,11 @@ namespace SimpleDrawing
                             playerState = PlayerStateEnum.DRAWER;
                             PlayerStateChanged?.Invoke(this, playerState);
 
-                            CommandReceived?.Invoke(this, new CommandEventArgs(commandType, $"You are the drawer choose a word: {_body}"));
+                            SendClientInfoMessage?.Invoke(this, $"You are the drawer choose a word: {_body}");
+                            CommandReceived?.Invoke(this, new CommandEventArgs(commandType, _body)); //Set words and receive on guesser mode
                             //TODO: Potentially add another eventhandler for admin commands; gameObserver.setChoosableWords(words.get(0), words.get(1), words.get(2));
 
-                            //TODO: Talk to erik about the following code
-                            //logger.Info("Set client to guesser mode for word choosing");
-                            //gameObserver.setGuesserMode();
+                            logger.Info("Set client to guesser mode for word choosing");
                             break;
                         }
                     // As the drawer selected a word, the server requests the start of the round
@@ -168,7 +167,7 @@ namespace SimpleDrawing
                         {
                             logger.Info("Request to start the round ");
                             logger.Debug("Game state: " + gameState + " Player state: " + playerState);
-                            if (IsStarting || !(IsDrawer || IsGuesser))
+                            if (!IsStarting || !(IsDrawer || IsGuesser))
                             {
                                 logger.Info("Client is in another game or player state!");
                                 client.SendCommand(CommandEnum.ROUND_START_NOTACKNOWLEDGEMENT);
@@ -200,12 +199,14 @@ namespace SimpleDrawing
                             }
 
                             chosenWord = _body;
+                            CommandReceived?.Invoke(this, new CommandEventArgs(commandType, chosenWord));
                             //gameObserver.setDisplayWord(chosenWord);
                             break;
                         }
 
                     case CommandEnum.CLOSE_GUESS:
                         {
+                            SendClientInfoMessage?.Invoke(this, $"{_body} is close!");
                             //TODO: Set output words gameObserver.outputWords(message.substring(3) + " is close!");
                             break;
                         }
@@ -233,6 +234,7 @@ namespace SimpleDrawing
                                 gameState = GameStateEnum.INITIAL;
                                 GameStateChanged?.Invoke(this, gameState);
 
+                                CommandReceived?.Invoke(this, new CommandEventArgs(CommandEnum.CLEAR, ""));
                                 //gameObserver.clearCanvas();
                                 //gameObserver.clearText();
                                 client.SendCommand(CommandEnum.ROUND_END_ACKNOWLEDGEMENT);
@@ -257,6 +259,7 @@ namespace SimpleDrawing
 
         public void SendCommand(object? sender, string message, CommandEnum commandType)
         {
+            logger.Debug($"{commandType}: {message}");
             if (!client.Connected)
                 return;
             client.SendCommand(commandType, message);
@@ -315,7 +318,8 @@ namespace SimpleDrawing
             GameStateChanged?.Invoke(this, gameState);
             playerState = PlayerStateEnum.NONE;
             PlayerStateChanged?.Invoke(this, playerState);
-            words.Clear();
+            if(words != null)
+                words.Clear();
             chosenWord = "";
             ResetMode?.Invoke(this, EventArgs.Empty);
         }
