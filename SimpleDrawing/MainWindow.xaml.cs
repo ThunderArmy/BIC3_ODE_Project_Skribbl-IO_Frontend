@@ -19,6 +19,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Xceed.Wpf.Toolkit;
 
 namespace SimpleDrawing
 {
@@ -36,13 +37,15 @@ namespace SimpleDrawing
             InitializeComponent();
             PrepareComponents();
             ConnectEventHandlers();
-            gameController.StartGame();
+            gameController.JoinGame();
+            SetGuessingWord("Pilot");
         }
 
         private void PrepareComponents()
         {
             drawController.Canvas = Field;
             ColorPicker.StandardColors.Remove(ColorPicker.StandardColors.First(c => c.Name == "Transparent"));
+            ColorPicker.StandardColors.Add(new ColorItem(Colors.SaddleBrown, "SaddleBrown"));
         }
 
         private void ConnectEventHandlers()
@@ -55,7 +58,7 @@ namespace SimpleDrawing
 
         private void DrawController_LineAdded(object? sender, (Line data, System.Windows.Media.Color c) line)
         {
-            gameController.SendCommand(sender, $"{line.data.X1};{line.data.Y1};{line.data.X2};{line.data.Y2};{line.data.StrokeThickness};{line.c}", CommandEnum.DRW);
+            gameController.SendCommand(sender, $"{line.data.X1};{line.data.Y1};{line.data.X2};{line.data.Y2};{line.data.StrokeThickness};{line.c}", CommandEnum.DRAWING);
         }
 
         private void DrawController_CanvasChanged(object? sender, Canvas e)
@@ -77,34 +80,8 @@ namespace SimpleDrawing
 
         private void Field_MouseMove(object sender, MouseEventArgs e)
         {
-            //logger.Trace("Relative to window " + e.GetPosition(this));
-            //logger.Trace("Relative to canvas " + e.GetPosition(Field));
             drawController.MouseMoved(sender, e.GetPosition(Field));
         }
-
-        //private void ColorClick(object sender, RoutedEventArgs e)
-        //{
-        //    if (sender is RadioButton b)
-        //    {
-        //        if (sender != Red)
-        //            Red.IsChecked = false;
-        //        if (sender != Blue)
-        //            Blue.IsChecked = false;
-        //        if (sender != Green)
-        //            Green.IsChecked = false;
-        //        if (sender != Yellow)
-        //            Yellow.IsChecked = false;
-        //        var color = b.Content switch
-        //        {
-        //            "Red" => Colors.Red,
-        //            "Green" => Colors.Green,
-        //            "Blue" => Colors.Blue,
-        //            "Yellow" => Colors.Yellow,
-        //            _ => Colors.Red,
-        //        };
-        //        drawController.SetColorChanged(sender, color);
-        //    }
-        //}
 
         private void Field_MouseLeave(object sender, MouseEventArgs e)
         {
@@ -148,7 +125,7 @@ namespace SimpleDrawing
             if (message.Trim().Length == 0) return;
             logger.Debug("Send message: " + message);
             AddChatMessage("Me: " + message);
-            gameController.SendCommand(sender, message, CommandEnum.MSG);
+            gameController.SendCommand(sender, message, CommandEnum.MESSAGE);
         }
 
         private void Window_MouseWheel(object sender, MouseWheelEventArgs e)
@@ -180,16 +157,18 @@ namespace SimpleDrawing
             logger.Info("Saved picture");
             //((BitmapImage)Field.Image).Save(p);
         }
+
         private void ClearButton_Click(object sender, RoutedEventArgs e)
         {
             drawController.ClearCanvas();
-            gameController.SendCommand(sender, null, CommandEnum.CLR);
+            gameController.SendCommand(sender, null, CommandEnum.CLEAR);
         }
+
         internal void ReceiveNonDrawingCommand(object? sender, CommandEventArgs e)
         {
             switch (e.CommandType)
             {
-                case CommandEnum.MSG:
+                case CommandEnum.MESSAGE:
                     {
                         Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                         {
@@ -199,9 +178,21 @@ namespace SimpleDrawing
                     break;
             }
         }
+
         private void AddChatMessage(string message)
         {
             chatTextBlock.Text += message + Environment.NewLine;
+        }
+
+        private void SetGuessingWord(string word)
+        {
+            //TODO: Word replacements are for testing only!
+            var _tmp = word;
+            word = new string('_', word.Length);
+
+            word = string.Join(' ', word.ToCharArray());
+            word += $" ({_tmp})";
+            GuessWordText.Text = word;
         }
 
         private void ColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<System.Windows.Media.Color?> e)

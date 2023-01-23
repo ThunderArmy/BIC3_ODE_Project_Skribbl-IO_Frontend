@@ -19,7 +19,7 @@
             <Canvas x:Name="Field" MouseDown="CanvasDown" MouseUp="CanvasUp" MouseLeave="Field_MouseLeave" MouseEnter="Field_MouseEnter" Background="White" Opacity="1" MouseMove="Field_MouseMove" Margin="0,0,0,0" Width="800" Height="500">
             </Canvas>
         </Border>
-        <Label x:Name="debugLabel" Content="DebugInfo" Canvas.Left="601" Canvas.Top="10" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="798,22,0,0"/>
+        <Label x:Name="debugLabel" Content="DebugInfo" Canvas.Left="601" Canvas.Top="10" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="800,22,0,0"/>
         <Grid Background="Transparent" Margin="50,570,770,155">
             <xctk:ColorPicker x:Name="ColorPicker" SelectedColor="Red" ShowAvailableColors="False" SelectedColorChanged="ColorPicker_SelectedColorChanged" Margin="0,0,0,1" BorderBrush="Black" DropDownBorderBrush="Black" ShowRecentColors="True" UsingAlphaChannel="True"/>
         </Grid>
@@ -39,7 +39,8 @@
         </Border>
         <Label Content="Skribbl.io for ODE" HorizontalAlignment="Left" Margin="50,18,0,0" VerticalAlignment="Top" FontFamily="Ink Free" FontSize="20" FontWeight="Bold"/>
         <Button BorderBrush="Black" Content="&#128247;" HorizontalAlignment="Left" VerticalAlignment="Top" Click="SaveButton_Click" FontSize="36" Width="70" Height="55" Margin="784,571,0,0"/>
-        <Label Content="F l u g z e u g" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,19,0,0" FontFamily="Arial" FontSize="18"/>
+        <!--<Label Content="F l u g z _ _ g" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,13,0,0" FontFamily="Arial" FontSize="18"/>-->
         <Button BorderBrush="Black" Content="&#128465;" HorizontalAlignment="Left" VerticalAlignment="Top" Click="ClearButton_Click" FontSize="36" Width="70" Height="55" Margin="700,571,0,0"/>
+        <TextBlock x:Name="GuessWordText" HorizontalAlignment="Center" TextWrapping="Wrap" Text="F l u g z _ _ g" VerticalAlignment="Top" Margin="0,27,0,0" FontSize="18" FontFamily="Arial"/>
     </Grid>
 </Window>

@@ -198,14 +198,14 @@ namespace SimpleDrawing
         internal void receiveCommand(object? sender, CommandEventArgs e)
         {
             logger.Debug($"Received command; type: {e.CommandType}, msg: {e.Command}");
-            if(e.CommandType == CommandEnum.CLR)
+            if(e.CommandType == CommandEnum.CLEAR)
             {
                 Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                 {
                     ClearCanvas();
                 }));
             }
-            if (e.CommandType != CommandEnum.DRW)
+            if (e.CommandType != CommandEnum.DRAWING)
                 return;
             Application.Current.Dispatcher.BeginInvoke(new Action(() =>
             {

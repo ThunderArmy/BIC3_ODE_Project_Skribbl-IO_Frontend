@@ -1,4 +1,5 @@
-﻿using SimpleDrawing.Service;
+﻿using EnumStringValues;
+using SimpleDrawing.Service;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -23,24 +24,25 @@ namespace SimpleDrawing.Service
         private TcpClient Client { get; set; }
         private StreamWriter output = null;
         private StreamReader input = null;
-        private TcpStateEnum currentState = TcpStateEnum.DISCONNETED;
+        private TcpStateEnum currentState = TcpStateEnum.DISCONNECTED;
         private readonly string hostname;
         private readonly int port;
         private static readonly object _lock = new();
-        public bool Disconnected => currentState == TcpStateEnum.DISCONNETED;
+        public bool Disconnected => currentState == TcpStateEnum.DISCONNECTED;
         public bool Starting => currentState == TcpStateEnum.STARTING;
         public bool Connected => currentState == TcpStateEnum.CONNECTED;
         public event EventHandler<string> DebugMessageSent;
         public event EventHandler<string> MessageReceived;
+        public event EventHandler<TcpStateEnum> StateChanged;
         public TcpService(string hostname, int port)
         {
             this.hostname = hostname;
             this.port = port;
         }
-        public void SendCommand(string message, CommandEnum commandEnum)
+        public void SendCommand(CommandEnum commandEnum, string message = "")
         {
             // Das Loglevel von drawing command ist trace!
-            if (commandEnum == CommandEnum.DRW)
+            if (commandEnum == CommandEnum.DRAWING)
             {
                 logger.Trace("Trying to send command connection status: " + currentState);
             }
@@ -49,9 +51,9 @@ namespace SimpleDrawing.Service
                 logger.Debug("Trying to send command connection status: " + currentState);
             }
 
-            output.WriteLine($"{commandEnum}{message}");
+            output.WriteLine($"{commandEnum.GetStringValue()}{message}");
 
-            if (commandEnum == CommandEnum.DRW)
+            if (commandEnum == CommandEnum.DRAWING)
             {
                 logger.Trace("Command:  " + commandEnum + " with message: " + message + " sent. ");
             }
@@ -75,13 +77,13 @@ namespace SimpleDrawing.Service
 
             lock (_lock)
             {
-                if (currentState != TcpStateEnum.DISCONNETED)
+                if (currentState != TcpStateEnum.DISCONNECTED)
                 {
                     logger.Info("Client is in another state other than disconnected!");
                     return;
                 }
                 currentState = TcpStateEnum.STARTING;
-                logger.Debug("Setting connection status to " + currentState);
+                StateChanged?.Invoke(this, currentState);
             }
 
             try
@@ -97,8 +99,8 @@ namespace SimpleDrawing.Service
                 DebugMessageSent?.Invoke(this, "Verbindung mit Server ist fehlgeschlagen!");
                 lock (_lock)
                 {
-                    currentState = TcpStateEnum.DISCONNETED;
-                    logger.Debug("Setting connection status to " + currentState);
+                    currentState = TcpStateEnum.DISCONNECTED;
+                    StateChanged?.Invoke(this, currentState);
                 }
 
             }
@@ -123,7 +125,7 @@ namespace SimpleDrawing.Service
                     lock (_lock)
                     {
                         currentState = TcpStateEnum.CONNECTED;
-                        logger.Debug("Setting connection status to " + currentState);
+                        StateChanged?.Invoke(this, currentState);
                     }
                 }
 
@@ -141,7 +143,7 @@ namespace SimpleDrawing.Service
                 lock (_lock)
                 {
                     currentState = TcpStateEnum.ERROR;
-                    logger.Debug("Setting connection status to " + currentState);
+                    StateChanged?.Invoke(this, currentState);
                 }
                 disconnect();
                 retry();
@@ -157,7 +159,7 @@ namespace SimpleDrawing.Service
             lock (_lock)
             {
                 currentState = TcpStateEnum.RETRYING;
-                logger.Debug("Setting connection status to " + currentState);
+                StateChanged?.Invoke(this, currentState);
             }
             do
             {
@@ -166,7 +168,7 @@ namespace SimpleDrawing.Service
                     secondsToWait = Math.Min(60, Math.Pow(2, tryNum));
                     tryNum++;
                     logger.Info($"Retry {tryNum} connecting to server after sleep {secondsToWait}");
-                    logger.Debug($"Current connection status: {currentState}");
+                    StateChanged?.Invoke(this, currentState);
 
                     Thread.Sleep((int)secondsToWait * 1000);
                     Client = new TcpClient(hostname, port);
@@ -196,7 +198,7 @@ namespace SimpleDrawing.Service
 
             lock(_lock) {
                 currentState = TcpStateEnum.CONNECTED;
-                logger.Debug("Setting connection status to " + currentState);
+                StateChanged?.Invoke(this, currentState);
             }
         }
         public void disconnect()
